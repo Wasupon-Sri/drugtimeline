@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive Patient Medication Timeline</title>
+    <!-- Load Tailwind CSS from CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Import Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        /* Use Inter font */
+        body { 
+            font-family: 'Inter', sans-serif; 
+        }
+        
+        /* Sticky first column for medication names */
+        .sticky-col { 
+            position: -webkit-sticky; 
+            position: sticky; 
+            left: 0; 
+            z-index: 10; 
+            background-color: white; 
+            /* Add a right border to separate it */
+            border-right: 2px solid #e5e7eb;
+        }
+        
+        /* Sticky header for dates */
+        thead th { 
+            position: -webkit-sticky; 
+            position: sticky; 
+            top: 0; 
+            z-index: 20; 
+            background-color: #f9fafb; /* Light gray bg for header */
+        }
+        
+        /* Ensure sticky header/col cells are above others */
+        thead .sticky-col { 
+            z-index: 30; 
+        }
+
+        /* Style for the timeline cells */
+        .timeline-cell {
+            height: 40px;
+            min-width: 60px; /* Set a minimum width for date cells */
+            border: 1px solid #e5e7eb; /* Cell borders */
+            /* Prevent text selection during drag */
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        /* Visual cue for the range being selected */
+        .selection-preview {
+            background-color: #d1d5db !important; /* Gray-300 */
+            opacity: 0.7;
+        }
+
+        /* Custom error message style */
+        #error-message {
+            display: none;
+            color: #ef4444; /* red-500 */
+            margin-top: 8px;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 p-4 md:p-8">
+
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Interactive Medication Timeline</h1>
+
+        <!-- Section 1: Date Range Setup -->
+        <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">1. Set Timeline Date Range</h2>
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label for="start-date" class="block text-sm font-medium text-gray-600">Start Date</label>
+                    <input type="date" id="start-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="end-date" class="block text-sm font-medium text-gray-600">End Date</label>
+                    <input type="date" id="end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                </div>
+                <button id="generate-grid" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                    Generate Grid
+                </button>
+            </div>
+            <p id="date-error" class="text-red-500 text-sm mt-2" style="display: none;"></p>
+        </div>
+
+        <!-- Section 2: Tools (Hidden initially) -->
+        <div id="tools" class="hidden bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-700 mb-3">2. Add Medications / Events</h2>
+            <div class="flex flex-wrap gap-4 items-end">
+                <div>
+                    <label for="item-name" class="block text-sm font-medium text-gray-600">Item Name</label>
+                    <input type="text" id="item-name" placeholder="e.g., Clopidogrel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                </div>
+                <div>
+                    <label for="item-category" class="block text-sm font-medium text-gray-600">Category</label>
+                    <select id="item-category" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                        <option value="Antiplatelet">Antiplatelet (Green)</option>
+                        <option value="Anticoagulant">Anticoagulant (Blue)</option>
+                        <option value="PPI">PPI (Purple)</option>
+                        <option value="Antibiotics">Antibiotics (Cyan)</option>
+                        <option value="Event">Event (Red)</option>
+                        <option value="Other">Other (Yellow)</option>
+                    </select>
+                </div>
+                <!-- This div is for the 'Specify Other' text box -->
+                <div id="other-category-wrapper" class="hidden">
+                    <label for="other-category-name" class="block text-sm font-medium text-gray-600">Specify "Other"</label>
+                    <input type="text" id="other-category-name" placeholder="e.g., Supplement" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
+                </div>
+                <!-- Wrapped button in div for alignment -->
+                <div>
+                    <button id="add-row" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                        Add Row
+                    </button>
+                </div>
+            </div>
+            <p id="item-error" class="text-red-500 text-sm mt-2" style="display: none;"></p>
+        </div>
+
+        <!-- Section 3: Timeline Table -->
+        <div id="timeline-container" class="overflow-x-auto w-full">
+            <!-- Table will be generated here -->
+            <table id="timeline-table" class="w-full border-collapse" style="table-layout: fixed;">
+                <thead class="bg-gray-50">
+                    <!-- Header row will be populated by JS -->
+                </thead>
+                <tbody>
+                    <!-- Timeline rows will be populated by JS -->
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script typecm="module">
+        const categoryColors = {
+            'Antiplatelet': 'bg-green-400',
+            'Anticoagulant': 'bg-blue-400',
+            'PPI': 'bg-purple-400',
+            'Antibiotics': 'bg-cyan-400', // Added Antibiotics
+            'Event': 'bg-red-500',
+            'Other': 'bg-yellow-400'
+        };
+
+        const allColorClasses = Object.values(categoryColors);
+
+        // DOM Elements
+        const generateBtn = document.getElementById('generate-grid');
+        const addRowBtn = document.getElementById('add-row');
+        const tableHead = document.querySelector('#timeline-table thead');
+        const tableBody = document.querySelector('#timeline-table tbody');
+        const toolsDiv = document.getElementById('tools');
+        const dateError = document.getElementById('date-error');
+        const itemError = document.getElementById('item-error');
+        const categorySelect = document.getElementById('item-category');
+        const otherCategoryWrapper = document.getElementById('other-category-wrapper');
+        const otherCategoryNameInput = document.getElementById('other-category-name');
+
+        let dates = [];
+
+        // --- Event Listener for Category Dropdown ---
+        categorySelect.addEventListener('change', () => {
+            if (categorySelect.value === 'Other') {
+                otherCategoryWrapper.classList.remove('hidden');
+            } else {
+                otherCategoryWrapper.classList.add('hidden');
+                otherCategoryNameInput.value = ''; // Clear it when hidden
+            }
+        });
+
+        // --- 1. Grid Generation ---
+        
+        generateBtn.addEventListener('click', () => {
+            const startDateEl = document.getElementById('start-date');
+            const endDateEl = document.getElementById('end-date');
+            
+            if (!startDateEl.value || !endDateEl.value) {
+                dateError.textContent = 'Please select both a start and end date.';
+                dateError.style.display = 'block';
+                return;
+            }
+            
+            const start = new Date(startDateEl.value + 'T00:00:00'); // Fix timezone issues
+            const end = new Date(endDateEl.value + 'T00:00:00');
+
+            if (start > end) {
+                dateError.textContent = 'Start date must be before or the same as the end date.';
+                dateError.style.display = 'block';
+                return;
+            }
+            
+            dateError.style.display = 'none';
+            generateTimelineGrid(start, end);
+            toolsDiv.classList.remove('hidden');
+        });
+
+        function generateTimelineGrid(start, end) {
+            // Clear existing grid
+            tableHead.innerHTML = '';
+            tableBody.innerHTML = '';
+            dates = [];
+
+            // Create header row
+            const headerRow = document.createElement('tr');
+            
+            // Sticky "Medication" header
+            const medHeader = document.createElement('th');
+            medHeader.className = 'sticky-col p-2 text-left text-sm font-semibold text-gray-900 border border-gray-300';
+            medHeader.textContent = 'Medication / Event';
+            medHeader.style.width = '200px'; // Fixed width for the first column
+            headerRow.appendChild(medHeader);
+
+            // Generate date headers
+            let currentDate = new Date(start);
+            while (currentDate <= end) {
+                dates.push(new Date(currentDate)); // Store date object
+                
+                const dateHeader = document.createElement('th');
+                dateHeader.className = 'p-2 text-sm font-medium text-gray-700 border border-gray-300';
+                dateHeader.textContent = formatDate(currentDate);
+                dateHeader.style.width = '60px'; // Fixed width for date columns
+                headerRow.appendChild(dateHeader);
+                
+                currentDate.setDate(currentDate.getDate() + 1);
+            }
+            
+            tableHead.appendChild(headerRow);
+        }
+
+        function formatDate(date) {
+            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+        }
+
+        // --- 2. Add Row ---
+
+        addRowBtn.addEventListener('click', () => {
+            const itemNameInput = document.getElementById('item-name');
+            // categorySelect, otherCategoryNameInput are defined globally
+            
+            const name = itemNameInput.value.trim();
+            const categoryValue = categorySelect.value;
+            let categoryName = categoryValue; // This is what we store in data-category
+
+            if (!name) {
+                itemError.textContent = 'Please enter an item name.';
+                itemError.style.display = 'block';
+                return;
+            }
+
+            // Check for "Other" category specification
+            if (categoryValue === 'Other') {
+                const specifiedName = otherCategoryNameInput.value.trim();
+                if (!specifiedName) {
+                    itemError.textContent = 'Please specify the "Other" category name.';
+                    itemError.style.display = 'block';
+                    return;
+                }
+                categoryName = specifiedName; // Use the specified name for the data attribute
+            }
+
+            itemError.style.display = 'none';
+            
+            // Color is still based on the selected value (e.g., 'Other' maps to yellow)
+            const colorClass = categoryColors[categoryValue];
+            
+            const newRow = document.createElement('tr');
+            newRow.setAttribute('data-category', categoryName); // Use the final category name
+            newRow.setAttribute('data-color', colorClass);
+            
+            // Sticky Name Cell (editable)
+            const nameCell = document.createElement('td');
+            nameCell.className = 'sticky-col p-2 text-sm font-medium text-gray-800 whitespace-nowrap';
+            nameCell.textContent = name;
+            nameCell.setAttribute('contenteditable', 'true');
+            newRow.appendChild(nameCell);
+            
+            // Empty Timeline Cells
+            dates.forEach(() => {
+                const cell = document.createElement('td');
+                cell.className = 'timeline-cell';
+                newRow.appendChild(cell);
+            });
+            
+            tableBody.appendChild(newRow);
+            itemNameInput.value = ''; // Clear item name input
+            
+            // Also clear 'Other' input and reset dropdown if it was used
+            if (categoryValue === 'Other') {
+                otherCategoryNameInput.value = '';
+            }
+        });
+
+        // --- 3. Click-and-Drag Interaction ---
+
+        let isDragging = false;
+        let startCell = null;
+        let currentRow = null;
+        let cellsToSelect = [];
+
+        // mousedown: Start the drag selection
+        tableBody.addEventListener('mousedown', (e) => {
+            if (!e.target.classList.contains('timeline-cell')) return;
+            
+            e.preventDefault(); // Prevent text selection
+            isDragging = true;
+            startCell = e.target;
+            currentRow = e.target.parentElement;
+            
+            // Clear any previous selections
+            document.querySelectorAll('.selection-preview').forEach(el => el.classList.remove('selection-preview'));
+            
+            updateSelection(e.target);
+        });
+
+        // mousemove: Update the selection range
+        tableBody.addEventListener('mousemove', (e) => {
+            if (!isDragging || !e.target.classList.contains('timeline-cell') || e.target.parentElement !== currentRow) return;
+            
+            e.preventDefault();
+            updateSelection(e.target);
+        });
+
+        // mouseup: Apply the change
+        document.addEventListener('mouseup', (e) => {
+            if (!isDragging) return;
+            
+            isDragging = false;
+            applyColorToSelection();
+            
+            // Clean up
+            document.querySelectorAll('.selection-preview').forEach(el => el.classList.remove('selection-preview'));
+            startCell = null;
+            currentRow = null;
+            cellsToSelect = [];
+        });
+
+        /**
+         * Visually highlights the cells between startCell and endCell.
+         */
+        function updateSelection(endCell) {
+            // Clear previous preview
+            cellsToSelect.forEach(cell => cell.classList.remove('selection-preview'));
+            cellsToSelect = [];
+            
+            const allCells = Array.from(currentRow.children).slice(1); // Get only timeline-cells
+            const startIndex = allCells.indexOf(startCell);
+            const endIndex = allCells.indexOf(endCell);
+            
+            if (startIndex === -1 || endIndex === -1) return;
+
+            const min = Math.min(startIndex, endIndex);
+            const max = Math.max(startIndex, endIndex);
+            
+            for (let i = min; i <= max; i++) {
+                const cell = allCells[i];
+                cell.classList.add('selection-preview');
+                cellsToSelect.push(cell);
+            }
+        }
+
+        /**
+         * Applies or removes the color from the selected cells.
+         * Toggles the color based on the current state of the cells.
+         */
+        function applyColorToSelection() {
+            if (!currentRow || cellsToSelect.length === 0) return;
+            
+            const colorClass = currentRow.getAttribute('data-color');
+            if (!colorClass) return;
+            
+            // Check if ALL cells in the selection are already colored
+            const shouldErase = cellsToSelect.every(cell => cell.classList.contains(colorClass));
+            
+            cellsToSelect.forEach(cell => {
+                // Remove all other colors first to prevent conflicts
+                allColorClasses.forEach(c => cell.classList.remove(c));
+                
+                if (!shouldErase) {
+                    cell.classList.add(colorClass);
+                }
+                // If shouldErase is true, we've already removed the color, so we do nothing.
+            });
+        }
+
+    </script>
+</body>
+</html>
