@@ -17,6 +17,8 @@
         /* Use Inter font */
         body { 
             font-family: 'Inter', sans-serif; 
+            /* Prevent pull-to-refresh on mobile */
+            overscroll-behavior-y: none;
         }
         
         /* Sticky first column for medication names */
@@ -55,6 +57,8 @@
             -moz-user-select: none;
             -ms-user-select: none;
             user-select: none;
+            /* For touch: prevent context menu */
+            -webkit-touch-callout: none;
         }
         
         /* Give cells a default width, but allow them to be overridden */
@@ -70,17 +74,7 @@
             padding-right: 4px;
         }
 
-        /* Zoom Level 2 (Smallest) */
-        .zoom-2 .daily-cell {
-            min-width: 25px;
-        }
-        .zoom-2 .daily-header {
-            min-width: 25px;
-            font-size: 10px;
-            padding: 4px 2px;
-            /* Vertical text */
-            writing-mode: vertical-rl;
-        }
+        /* REMOVED: Zoom Level 2 (Smallest) */
 
         /* Visual cue for the range being selected */
         .selection-preview {
@@ -128,7 +122,7 @@
         .edit-controls-container {
             display: flex; /* Default to show for edit mode */
             align-items: center;
-            justify-content: flex-end; /* Push controls to the right */
+            /* justify-content will be set by JS */
             gap: 8px; /* gap-2 */
             flex-shrink: 0; /* Don't let it shrink */
             margin-left: auto; /* Push to the right */
@@ -184,8 +178,9 @@
 
 
         /* Adjust width of the sticky column for presentation vs. edit */
+        /* Use a single width, let flex-col handle height on mobile */
         .edit-mode .sticky-col-med {
-             width: 320px; /* Width for name + swatches + picker + remove */
+             width: 320px; 
         }
         .presentation-mode .sticky-col-med {
             width: 180px; /* Width for just name */
@@ -195,23 +190,24 @@
 
 <body class="bg-gray-100 min-h-screen flex flex-col items-center py-4 md:py-8">
 
-    <!-- Added margin-bottom (mb-32) for extra space at the bottom -->
-    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-6 w-full mb-32">
+    <!-- p-4 sm:p-6 for better mobile padding -->
+    <div class="max-w-7xl mx-auto bg-white rounded-lg shadow-lg p-4 sm:p-6 w-full mb-32">
         <h1 class="text-2xl md:text-3xl font-bold text-gray-800 mb-6">Interactive Medication Timeline</h1>
 
         <!-- Section 1: Date Range Setup -->
         <div class="bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
             <h2 class="text-lg font-semibold text-gray-700 mb-3">1. Set Timeline Date Range</h2>
-            <div class="flex flex-wrap gap-4 items-end">
-                <div>
+            <!-- Stack vertically on mobile, row on sm+ -->
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:items-end">
+                <div class="w-full">
                     <label for="start-date" class="block text-sm font-medium text-gray-600">Start Date</label>
                     <input type="date" id="start-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                 </div>
-                <div>
+                <div class="w-full">
                     <label for="end-date" class="block text-sm font-medium text-gray-600">End Date</label>
                     <input type="date" id="end-date" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                 </div>
-                <button id="generate-grid" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2">
+                <button id="generate-grid" class="bg-blue-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 w-full sm:w-auto">
                     Generate Grid
                 </button>
             </div>
@@ -221,15 +217,14 @@
         <!-- Section 2: Tools (Hidden initially) -->
         <div id="tools" class="hidden bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
             <h2 class="text-lg font-semibold text-gray-700 mb-3">2. Add Medications / Events</h2>
-            <div class="flex flex-wrap gap-4 items-end">
-                <div>
+            <!-- Stack vertically on mobile, row on sm+ -->
+            <div class="flex flex-col sm:flex-row sm:flex-wrap gap-4 sm:items-end">
+                <div class="w-full sm:flex-1">
                     <label for="item-name" class="block text-sm font-medium text-gray-600">Item Name</label>
                     <input type="text" id="item-name" placeholder="e.g., Clopidogrel" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:text-sm">
                 </div>
-                <!-- Removed Category Select and "Other" wrapper -->
-                <!-- Wrapped button in div for alignment -->
                 <div>
-                    <button id="add-row" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2">
+                    <button id="add-row" class="bg-green-600 text-white px-4 py-2 rounded-md shadow-sm hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2 w-full sm:w-auto">
                         Add Row
                     </button>
                 </div>
@@ -240,7 +235,8 @@
         <!-- Section 3: Display Options (Hidden initially) -->
         <div id="display-options" class="hidden bg-gray-50 p-4 rounded-lg mb-6 border border-gray-200">
             <h2 class="text-lg font-semibold text-gray-700 mb-3">3. Display Options</h2>
-            <div class="flex flex-wrap items-center gap-4">
+            <!-- Stack vertically on mobile, row on sm+ -->
+            <div class="flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-center gap-4">
                 <div class="flex items-center gap-2">
                     <span class="text-sm font-medium text-gray-600">Zoom:</span>
                     <button id="zoom-out" class="bg-gray-200 text-gray-700 w-8 h-8 rounded-full shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 font-bold">-</button>
@@ -248,7 +244,7 @@
                     <button id="zoom-reset" class="bg-gray-200 text-gray-600 px-3 py-1 rounded-md shadow-sm hover:bg-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm">Reset</button>
                 </div>
                 
-                <!-- Spacer -->
+                <!-- Spacer (hidden on mobile, visible sm+) -->
                 <div class="border-l border-gray-300 h-8 hidden sm:block"></div>
                 
                 <!-- Edit Mode Toggle -->
@@ -260,7 +256,7 @@
                     </label>
                 </div>
 
-                <!-- Spacer -->
+                <!-- Spacer (hidden on mobile, visible sm+) -->
                 <div class="border-l border-gray-300 h-8 hidden sm:block"></div>
                 
                 <!-- Save/Copy buttons -->
@@ -317,8 +313,8 @@
         let dailyDates = []; // Master list of all individual dates
         // Stores all row data: Map<rowId, {name, color (hex), state: Map<dateString, 1>}>
         let gridState = new Map();
-        let currentZoomLevel = 0; // 0 = default, 1 = mid, 2 = small
-        const maxZoomLevel = 2;
+        let currentZoomLevel = 0; // 0 = default, 1 = mid
+        const maxZoomLevel = 1; // CHANGED: Only one zoom level now
 
         /**
          * Updates the color for a given row in the state and live in the DOM.
@@ -424,6 +420,7 @@
         });
 
         zoomOutBtn.addEventListener('click', () => {
+            // Use maxZoomLevel
             if (currentZoomLevel < maxZoomLevel) {
                 currentZoomLevel++;
                 applyZoom();
@@ -437,7 +434,7 @@
 
         function applyZoom() {
             // Remove old zoom classes
-            tableEl.classList.remove('zoom-0', 'zoom-1', 'zoom-2');
+            tableEl.classList.remove('zoom-0', 'zoom-1'); // Removed zoom-2
             // Add current one
             tableEl.classList.add('zoom-' + currentZoomLevel);
         }
@@ -468,330 +465,4 @@
             editModeToggle.checked = false;
             editModeToggle.dispatchEvent(new Event('change')); // Trigger change to apply styles
             
-            // Set loading state
-            savePngBtn.textContent = 'Saving...';
-            savePngBtn.disabled = true;
-
-            // Give the browser a moment to apply style changes before capturing
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            // Run capture
-            const canvas = await captureTable();
-
-            // Create download link
-            const link = document.createElement('a');
-            link.href = canvas.toDataURL('image/png');
-            link.download = 'medication_timeline.png';
-            link.click();
-            link.remove();
-            
-            // Restore original edit mode state
-            editModeToggle.checked = originalEditModeState;
-            editModeToggle.dispatchEvent(new Event('change')); // Trigger change to restore styles
-
-            // Reset button
-            savePngBtn.textContent = 'Save as PNG';
-            savePngBtn.disabled = false;
-        }
-        
-        /**
-         * A helper function to run html2canvas on the table.
-         * It temporarily removes overflow constraints to capture the entire table.
-         */
-        async function captureTable() {
-            // Store original styles
-            const originalContainerOverflow = timelineContainer.style.overflowX;
-            const originalTableLayout = tableEl.style.tableLayout;
-
-            // Temporarily modify styles to ensure full capture
-            timelineContainer.style.overflowX = 'visible';
-            tableEl.style.tableLayout = 'auto'; // Let it expand
-
-            // Give the browser a moment to apply style changes before capturing
-            await new Promise(resolve => setTimeout(resolve, 50));
-
-            const canvas = await html2canvas(tableEl, {
-                // Options to improve quality
-                scale: 2, // Capture at 2x resolution
-                useCORS: true,
-                backgroundColor: '#ffffff' // Ensure background is white
-            });
-
-            // Restore original styles
-            timelineContainer.style.overflowX = originalContainerOverflow;
-            tableEl.style.tableLayout = originalTableLayout;
-
-            return canvas;
-        }
-
-
-        // --- Main Rendering Function ---
-        
-        /**
-         * Re-draws the entire table (head and body) based on
-         * `gridState`.
-         */
-        function renderTable() {
-            tableHead.innerHTML = '';
-            tableBody.innerHTML = '';
-            
-            // Apply current zoom level to table
-            applyZoom();
-
-            // 1. Get column definitions
-            const columnData = getColumnData();
-            
-            // 2. Build Header
-            const headerRow = document.createElement('tr');
-            const medHeader = document.createElement('th');
-            medHeader.className = 'sticky-col p-2 text-left text-sm font-semibold text-gray-900';
-            // Dynamically apply width based on edit mode
-            medHeader.classList.add(editModeToggle.checked ? 'sticky-col-med' : 'sticky-col-med'); // Placeholder for dynamic width
-            headerRow.appendChild(medHeader);
-
-            columnData.forEach(col => {
-                const dateHeader = document.createElement('th');
-                dateHeader.className = `p-2 text-sm font-medium text-gray-700 ${col.headerClass}`;
-                dateHeader.textContent = col.label;
-                headerRow.appendChild(dateHeader);
-            });
-            tableHead.appendChild(headerRow);
-            
-            // Apply width explicitly after header is in DOM
-            const nameColumnWidth = editModeToggle.checked ? '320px' : '180px';
-            medHeader.style.width = nameColumnWidth;
-
-
-            // 3. Build Body
-            gridState.forEach((rowInfo, rowId) => {
-                const row = document.createElement('tr');
-                row.setAttribute('data-row-id', rowId);
-                
-                // Sticky Name Cell (with editable name, color picker, and remove button)
-                const nameCell = document.createElement('td');
-                nameCell.className = 'sticky-col p-2 text-sm font-medium text-gray-800 border-b border-gray-300';
-
-                // Flex container for name and controls
-                const cellContentWrapper = document.createElement('div');
-                cellContentWrapper.className = 'flex items-center gap-2 w-full';
-
-                // Editable name span
-                const nameSpan = document.createElement('span');
-                nameSpan.textContent = rowInfo.name;
-                nameSpan.setAttribute('contenteditable', editModeToggle.checked ? 'true' : 'false');
-                nameSpan.className = 'flex-grow min-w-0 name-editable';
-                if (editModeToggle.checked) {
-                    nameSpan.addEventListener('blur', (e) => {
-                        // Save name change back to state
-                        rowInfo.name = e.target.textContent.trim(); // Trim whitespace
-                        e.target.textContent = rowInfo.name; // Set back trimmed version
-                    });
-                }
-                
-                // Controls container (color picker, remove button)
-                const controlsContainer = document.createElement('div');
-                controlsContainer.className = 'edit-controls-container flex-shrink-0'; 
-
-                // --- Pastel Swatch Container ---
-                const swatchContainer = document.createElement('div');
-                swatchContainer.className = 'flex items-center gap-1';
-                
-                const pastelColors = [
-                    '#d1d5db', // Gray
-                    '#fecaca', // Red
-                    '#fed7aa', // Orange
-                    '#fef08a', // Yellow
-                    '#bbf7d0', // Green
-                    '#bfd6fe', // Blue
-                    '#e9d5ff'  // Purple
-                ];
-
-                // Color Picker (must be created here to be referenced by swatches)
-                const colorPicker = document.createElement('input');
-                colorPicker.type = 'color';
-                colorPicker.value = rowInfo.color; // Set to current hex color
-                colorPicker.className = 'color-picker-input';
-                colorPicker.title = 'Change row color';
-
-                pastelColors.forEach(color => {
-                    const swatch = document.createElement('button');
-                    swatch.className = 'swatch';
-                    swatch.style.backgroundColor = color;
-                    swatch.title = `Set color to ${color}`;
-                    swatch.addEventListener('click', () => {
-                        updateRowColor(rowId, color);
-                        colorPicker.value = color; // Update color picker too
-                    });
-                    swatchContainer.appendChild(swatch);
-                });
-                // --- END: Pastel Swatch Container ---
-                
-                colorPicker.addEventListener('input', (e) => {
-                    updateRowColor(rowId, e.target.value);
-                });
-
-                // Remove button
-                const removeBtn = document.createElement('button');
-                removeBtn.textContent = '×'; // Simple 'X'
-                removeBtn.className = 'text-red-500 hover:text-red-700 font-bold text-lg leading-none p-0 w-6 h-6 rounded-full hover:bg-red-100 flex items-center justify-center flex-shrink-0';
-                removeBtn.title = 'Remove row';
-                removeBtn.addEventListener('click', () => {
-                    // Get rowId and remove from state
-                    const rowIdToRemove = row.getAttribute('data-row-id');
-                    if (rowIdToRemove) {
-                        gridState.delete(rowIdToRemove);
-                        renderTable(); // Re-render the table
-                    }
-                });
-
-                // Append elements to containers based on edit mode
-                cellContentWrapper.appendChild(nameSpan);
-
-                if (editModeToggle.checked) {
-                    controlsContainer.appendChild(swatchContainer);
-                    controlsContainer.appendChild(colorPicker);
-                    controlsContainer.appendChild(removeBtn);
-                    cellContentWrapper.appendChild(controlsContainer);
-                }
-                
-                nameCell.appendChild(cellContentWrapper);
-                row.appendChild(nameCell);
-
-
-                // Add timeline cells
-                columnData.forEach(col => {
-                    const cell = document.createElement('td');
-                    cell.className = `timeline-cell ${col.cellClass}`;
-                    
-                    // Store corresponding dates in the cell for the drag handler
-                    cell.setAttribute('data-dates', JSON.stringify(col.dates));
-                    
-                    // Check if *any* date in this column is "on"
-                    const isColored = col.dates.some(dateStr => rowInfo.state.has(dateStr));
-                    
-                    if (isColored) {
-                        cell.style.backgroundColor = rowInfo.color; // Apply color from state
-                    }
-                    row.appendChild(cell);
-                });
-                tableBody.appendChild(row);
-            });
-        }
-        
-        /**
-         * Generates an array of column definitions based on granularity.
-         * Each column object contains its label, the dates it represents, and its CSS class.
-         */
-        function getColumnData() {
-            if (dailyDates.length === 0) return [];
-            
-            const columns = [];
-            const isoDate = (date) => date.toISOString().split('T')[0];
-
-            dailyDates.forEach(date => {
-                columns.push({
-                    label: formatDate(date),
-                    dates: [isoDate(date)],
-                    cellClass: 'daily-cell',
-                    headerClass: 'daily-header'
-                });
-            });
-            
-            return columns;
-        }
-
-        function formatDate(date) {
-            return date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
-        }
-        
-        // --- Click-and-Drag Interaction ---
-
-        let isDragging = false;
-        let startCell = null;
-        let currentRow = null;
-        let cellsToSelect = [];
-
-        tableBody.addEventListener('mousedown', (e) => {
-            // Only allow dragging in edit mode and on timeline cells
-            if (!editModeToggle.checked || !e.target.classList.contains('timeline-cell')) return;
-            
-            e.preventDefault(); 
-            isDragging = true;
-            startCell = e.target;
-            currentRow = e.target.parentElement;
-            document.querySelectorAll('.selection-preview').forEach(el => el.classList.remove('selection-preview'));
-            updateSelection(e.target);
-        });
-
-        tableBody.addEventListener('mousemove', (e) => {
-            if (!isDragging || !e.target.classList.contains('timeline-cell') || e.target.parentElement !== currentRow) return;
-            e.preventDefault();
-            updateSelection(e.target);
-        });
-
-        document.addEventListener('mouseup', (e) => {
-            if (!isDragging) return;
-            isDragging = false;
-            applyColorToSelection(); // Apply changes to the data model
-            renderTable(); // Re-render the table from the model
-            startCell = null;
-            currentRow = null;
-            cellsToSelect = [];
-        });
-
-        function updateSelection(endCell) {
-            cellsToSelect.forEach(cell => cell.classList.remove('selection-preview'));
-            cellsToSelect = [];
-            
-            const allCells = Array.from(currentRow.children).slice(1); // Get only timeline-cells
-            const startIndex = allCells.indexOf(startCell);
-            const endIndex = allCells.indexOf(endCell);
-            
-            if (startIndex === -1 || endIndex === -1) return;
-
-            const min = Math.min(startIndex, endIndex);
-            const max = Math.max(startIndex, endIndex);
-            
-            for (let i = min; i <= max; i++) {
-                const cell = allCells[i];
-                cell.classList.add('selection-preview');
-                cellsToSelect.push(cell);
-            }
-        }
-
-        /**
-         * Applies or removes color from the gridState data model.
-         */
-        function applyColorToSelection() {
-            if (!currentRow || cellsToSelect.length === 0) return;
-            
-            const rowId = currentRow.getAttribute('data-row-id');
-            const rowInfo = gridState.get(rowId);
-            if (!rowInfo) return;
-
-            // 1. Get all unique daily dates affected by this selection
-            const datesToToggle = new Set();
-            cellsToSelect.forEach(cell => {
-                const cellDates = JSON.parse(cell.getAttribute('data-dates'));
-                cellDates.forEach(dateStr => datesToToggle.add(dateStr));
-            });
-
-            // 2. Decide whether to add or remove color
-            const allDates = Array.from(datesToToggle);
-            const shouldErase = allDates.every(dateStr => rowInfo.state.has(dateStr));
-
-            // 3. Update the data model (gridState)
-            allDates.forEach(dateStr => {
-                if (shouldErase) {
-                    rowInfo.state.delete(dateStr);
-                } else {
-                    rowInfo.state.set(dateStr, 1);
-                }
-            });
-            
-            // The mouseup listener will call renderTable() to reflect these changes
-        }
-
-    </script>
-</body>
-</html>
+    
